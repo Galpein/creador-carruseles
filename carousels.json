@@ -1,0 +1,32 @@
+[
+  {
+    "id": "001-diseno-premium",
+    "title": "Diseño Premium Tech",
+    "date": "2023-10-26",
+    "file": "carousels/001-diseno-premium.html"
+  },
+  {
+    "id": "002-web-dinosaurio",
+    "title": "Tu web artesanal de 3.000€ es un dinosaurio",
+    "date": "2026-03-26",
+    "file": "carousels/002-web-dinosaurio.html"
+  },
+  {
+    "id": "003-pyme-ia",
+    "title": "La IA no te quitará el trabajo… te lo quitará una PYME",
+    "date": "2026-03-26",
+    "file": "carousels/003-pyme-ia.html"
+  },
+  {
+    "id": "004-fin-webmasters",
+    "title": "El fin de los 'Webmasters': Toma el control",
+    "date": "2026-03-26",
+    "file": "carousels/004-fin-webmasters.html"
+  },
+  {
+    "id": "005-seo-ia",
+    "title": "Google odia tu contenido genérico (y la IA puede salvarte)",
+    "date": "2026-03-26",
+    "file": "carousels/005-seo-ia.html"
+  }
+]

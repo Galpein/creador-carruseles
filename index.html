@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Carruseles | App</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#F4F0E6',
+                        charcoal: '#111111',
+                        coral: '#D6876D',
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        hand: ['"Caveat"', 'cursive'],
+                    },
+                    letterSpacing: {
+                        tighter: '-0.04em',
+                        tightest: '-0.06em',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Textures & Effects -->
+    <style>
+        /* CSS Reset for smooth scaling */
+        body { margin: 0; overflow: hidden; background-color: #0a0a0a; color: #111111; }
+        
+        /* 1080x1350 Canvas Setup */
+        #scale-wrapper {
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
+        }
+
+        .canvas-container {
+            width: 1080px;
+            height: 1350px;
+            position: relative;
+            background-color: #F4F0E6; /* Cream */
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Texture: SVG Noise */
+        .layer-noise {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.04;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Texture: Tech Grid (40px) */
+        .layer-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(17, 17, 17, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(17, 17, 17, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Texture: Glows */
+        .layer-glows {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .glow-top-left {
+            position: absolute;
+            top: -200px;
+            left: -200px;
+            width: 800px;
+            height: 800px;
+            background-color: #D6876D; /* Coral */
+            filter: blur(150px);
+            opacity: 0.10;
+            border-radius: 50%;
+        }
+        .glow-bottom-right {
+            position: absolute;
+            bottom: -200px;
+            right: -200px;
+            width: 800px;
+            height: 800px;
+            background-color: #D6876D; /* Coral */
+            filter: blur(150px);
+            opacity: 0.10;
+            border-radius: 50%;
+        }
+
+        /* Glassmorphism Capsule */
+        .glass-capsule {
+            background: rgba(244, 240, 230, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(17, 17, 17, 0.08);
+            box-shadow: 0 8px 32px rgba(17, 17, 17, 0.05);
+        }
+
+        /* Slide Transition Animations */
+        @keyframes slide-in {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .animate-content > * {
+            animation: slide-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            opacity: 0;
+        }
+        .animate-content > *:nth-child(1) { animation-delay: 0.1s; }
+        .animate-content > *:nth-child(2) { animation-delay: 0.2s; }
+        .animate-content > *:nth-child(3) { animation-delay: 0.3s; }
+        .animate-content > *:nth-child(4) { animation-delay: 0.4s; }
+
+        /* Typography Utilities */
+        h1, h2, h3 { 
+            letter-spacing: -0.04em; 
+            line-height: 0.9 !important; /* Force tight line-height for all headings */
+        }
+        
+        /* Fix for Plus Jakarta Sans spacing issues */
+        .text-\[150px\] {
+            line-height: 0.95 !important;
+            margin-bottom: 30px !important;
+            margin-top: 10px !important;
+        }
+        .text-\[130px\] {
+            line-height: 0.95 !important;
+            margin-bottom: 30px !important;
+            margin-top: 10px !important;
+        }
+        .text-\[120px\] {
+            line-height: 0.95 !important;
+            margin-bottom: 30px !important;
+            margin-top: 10px !important;
+        }
+        .text-\[110px\] {
+            line-height: 1 !important;
+            margin-bottom: 20px !important;
+        }
+        .text-\[90px\] {
+            line-height: 1 !important;
+            margin-bottom: 20px !important;
+        }
+
+        /* Export Utilities */
+        .exporting .animate-content > * {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
+        .export-mode {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            transform: scale(1) !important;
+            transform-origin: top left !important;
+            z-index: 9999 !important;
+        }
+
+        /* Sidebar scrollbar */
+        .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
+</head>
+<body class="w-screen h-screen flex font-sans bg-[#0a0a0a]">
+
+    <!-- Sidebar / Mini App UI -->
+    <aside class="w-[320px] h-full bg-[#111] border-r border-white/10 flex flex-col flex-shrink-0 z-50">
+        <div class="p-6 border-b border-white/10">
+            <h1 class="text-white font-bold text-xl tracking-tight">Mis Carruseles</h1>
+            <p class="text-white/50 text-sm mt-1">Selecciona uno para previsualizar</p>
+        </div>
+        
+        <div id="sidebar-list" class="flex-1 overflow-y-auto p-4 space-y-2 sidebar-scroll">
+            <!-- Cargando... -->
+            <div class="text-white/50 text-sm text-center py-10">Cargando carruseles...</div>
+        </div>
+
+        <div class="p-6 border-t border-white/10 bg-[#151515]">
+            <p class="text-white/40 text-xs text-center">Sistema de Generación v2.0</p>
+        </div>
+    </aside>
+
+    <!-- Main Preview Area -->
+    <main class="flex-1 relative flex flex-col items-center justify-center overflow-hidden" id="preview-container">
+        
+        <!-- Workspace UI (Controls) -->
+        <div class="absolute top-0 left-0 right-0 h-[100px] z-50 flex items-center justify-center gap-4 bg-gradient-to-b from-[#0a0a0a] to-transparent pointer-events-none">
+            <div class="flex items-center gap-4 bg-[#151515]/90 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 text-white shadow-2xl pointer-events-auto">
+                <button id="btn-prev" class="hover:text-coral transition-colors flex items-center gap-2 font-medium">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Anterior
+                </button>
+                <div class="w-px h-6 bg-white/20"></div>
+                <span id="ui-counter" class="font-mono font-bold tracking-widest text-sm">- / -</span>
+                <div class="w-px h-6 bg-white/20"></div>
+                <button id="btn-next" class="hover:text-coral transition-colors flex items-center gap-2 font-medium">
+                    Siguiente
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                <div class="w-px h-6 bg-white/20"></div>
+                <button id="btn-show-prompt" class="hover:text-coral transition-colors flex items-center gap-2 font-medium bg-white/10 px-4 py-2 rounded-full" title="Ver Prompt Usado">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Ver Prompt
+                </button>
+                <button disabled class="flex items-center gap-2 font-medium bg-white/5 text-white/30 px-4 py-2 rounded-full ml-4 cursor-not-allowed" title="Próximamente">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Exportar (Pronto)
+                </button>
+            </div>
+        </div>
+
+        <!-- Spacer for the controls -->
+        <div class="h-[80px] w-full flex-shrink-0"></div>
+
+        <!-- Scale Wrapper Container -->
+        <div class="flex-1 w-full flex items-center justify-center relative">
+            <!-- Scale Wrapper -->
+            <div id="scale-wrapper">
+            <!-- ================= EL MOLDE MAESTRO ================= -->
+            <div id="master-mold" class="canvas-container">
+                
+                <!-- Aesthetics Layers -->
+                <div class="layer-grid"></div>
+                <div class="layer-noise"></div>
+                <div class="layer-glows">
+                    <div class="glow-top-left"></div>
+                    <div class="glow-bottom-right"></div>
+                </div>
+
+                <!-- Content Container -->
+                <div class="relative z-10 flex flex-col h-full p-[80px]">
+                    
+                    <!-- Header -->
+                    <header class="flex items-center justify-between">
+                        <div class="font-extrabold text-3xl tracking-tighter uppercase text-charcoal">
+                            TU.<span class="text-coral">MARCA</span>
+                        </div>
+                        <!-- Visual Progress Bar -->
+                        <div class="w-64 h-2 bg-charcoal/10 rounded-full overflow-hidden">
+                            <div id="progress-bar" class="h-full bg-coral transition-all duration-500 ease-out w-0"></div>
+                        </div>
+                    </header>
+
+                    <!-- Main Injection Area -->
+                    <main id="slide-injection-area" class="flex-1 flex flex-col justify-center py-10 relative">
+                        <!-- Content injected via JS -->
+                        <div class="text-center text-charcoal/30 font-bold text-2xl">Selecciona un carrusel en el menú</div>
+                    </main>
+
+                    <!-- Footer -->
+                    <footer class="flex justify-center mt-auto">
+                        <div class="glass-capsule px-10 py-4 rounded-full flex items-center gap-3 text-charcoal opacity-0 transition-opacity" id="footer-capsule">
+                            <span id="slide-counter" class="font-sans font-bold text-xl tracking-[0.2em]">- / -</span>
+                        </div>
+                    </footer>
+
+                </div>
+            </div>
+            <!-- =================================================== -->
+        </div>
+        </div>
+
+    </main>
+
+    <!-- Prompt Modal -->
+    <div id="prompt-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-[#151515] border border-white/10 w-full max-w-3xl max-h-[80vh] rounded-2xl shadow-2xl flex flex-col transform scale-95 transition-transform duration-300" id="prompt-modal-content">
+            <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                <h2 class="text-white font-bold text-xl flex items-center gap-3">
+                    <svg class="w-6 h-6 text-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Prompt Base del Carrusel
+                </h2>
+                <button id="btn-close-modal" class="text-white/50 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 sidebar-scroll">
+                <pre id="prompt-text" class="text-white/70 font-mono text-sm whitespace-pre-wrap leading-relaxed">Cargando prompt...</pre>
+            </div>
+            <div class="p-4 border-t border-white/10 bg-[#111] rounded-b-2xl flex justify-end">
+                <button id="btn-copy-prompt" class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Copiar Prompt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vanilla JS Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Global State
+            let slidesData = [];
+            let totalSlides = 0;
+            let currentSlide = 0;
+            let currentCarouselId = null;
+
+            // DOM Elements
+            const sidebarList = document.getElementById('sidebar-list');
+            const injectionArea = document.getElementById('slide-injection-area');
+            const progressBar = document.getElementById('progress-bar');
+            const slideCounter = document.getElementById('slide-counter');
+            const uiCounter = document.getElementById('ui-counter');
+            const footerCapsule = document.getElementById('footer-capsule');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnExport = document.getElementById('btn-export');
+            const btnExportAll = document.getElementById('btn-export-all');
+            const btnShowPrompt = document.getElementById('btn-show-prompt');
+            const promptModal = document.getElementById('prompt-modal');
+            const promptModalContent = document.getElementById('prompt-modal-content');
+            const btnCloseModal = document.getElementById('btn-close-modal');
+            const promptText = document.getElementById('prompt-text');
+            const btnCopyPrompt = document.getElementById('btn-copy-prompt');
+            const previewContainer = document.getElementById('preview-container');
+            const wrapper = document.getElementById('scale-wrapper');
+
+            // 1. Fetch App Data
+            async function initApp() {
+                try {
+                    const res = await fetch('carousels.json');
+                    if (!res.ok) throw new Error('No se pudo cargar carousels.json');
+                    const carousels = await res.json();
+                    renderSidebar(carousels);
+                    
+                    // Auto-load first carousel if exists
+                    if(carousels.length > 0) {
+                        loadCarousel(carousels[0].file, carousels[0].id);
+                    }
+                } catch (error) {
+                    sidebarList.innerHTML = `<div class="text-red-400 text-sm p-4 text-center">Error: Asegúrate de estar corriendo un servidor local (HTTP) y no abrir el archivo directamente (file://).</div>`;
+                    console.error(error);
+                }
+            }
+
+            // 2. Render Sidebar
+            function renderSidebar(carousels) {
+                sidebarList.innerHTML = carousels.map(c => `
+                    <button id="btn-${c.id}" onclick="loadCarousel('${c.file}', '${c.id}')" class="carousel-btn w-full text-left px-4 py-4 rounded-xl border border-transparent hover:bg-white/5 transition-all mb-2 flex flex-col gap-1">
+                        <span class="font-bold text-white text-base leading-tight">${c.title}</span>
+                        <span class="text-xs text-white/40 font-mono">${c.date}</span>
+                    </button>
+                `).join('');
+            }
+
+            // 3. Load Selected Carousel
+            window.loadCarousel = async function(fileUrl, id) {
+                // Update Sidebar UI
+                document.querySelectorAll('.carousel-btn').forEach(btn => {
+                    btn.classList.remove('bg-white/10', 'border-white/20');
+                    btn.classList.add('border-transparent');
+                });
+                const activeBtn = document.getElementById(`btn-${id}`);
+                if(activeBtn) {
+                    activeBtn.classList.remove('border-transparent');
+                    activeBtn.classList.add('bg-white/10', 'border-white/20');
+                }
+                
+                currentCarouselId = id;
+
+                // Fetch HTML
+                try {
+                    const res = await fetch(fileUrl);
+                    const htmlText = await res.text();
+                    
+                    // Parse HTML
+                    const tempDoc = new DOMParser().parseFromString(htmlText, 'text/html');
+                    slidesData = Array.from(tempDoc.querySelectorAll('section'));
+                    totalSlides = slidesData.length;
+                    
+                    if (totalSlides > 0) {
+                        currentSlide = 0;
+                        footerCapsule.classList.remove('opacity-0');
+                        renderSlide(0);
+                    } else {
+                        injectionArea.innerHTML = '<div class="text-center text-charcoal/50 font-bold text-xl">El archivo no contiene etiquetas &lt;section&gt;</div>';
+                        footerCapsule.classList.add('opacity-0');
+                    }
+                } catch (error) {
+                    console.error("Error loading carousel file:", error);
+                }
+            }
+
+            // 4. Render Individual Slide
+            function renderSlide(index) {
+                if(!slidesData[index]) return;
+
+                // Clone content to restart animations properly
+                const slideContent = slidesData[index].cloneNode(true);
+                injectionArea.innerHTML = '';
+                injectionArea.appendChild(slideContent);
+
+                // Update Progress (Visual)
+                const progressPercentage = ((index + 1) / totalSlides) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+
+                // Update Counters
+                const currentStr = String(index + 1).padStart(2, '0');
+                const totalStr = String(totalSlides).padStart(2, '0');
+                slideCounter.textContent = `${currentStr} / ${totalStr}`;
+                uiCounter.textContent = `${index + 1} / ${totalSlides}`;
+
+                // Update Button States
+                btnPrev.style.opacity = index === 0 ? '0.3' : '1';
+                btnPrev.style.pointerEvents = index === 0 ? 'none' : 'auto';
+                
+                btnNext.style.opacity = index === totalSlides - 1 ? '0.3' : '1';
+                btnNext.style.pointerEvents = index === totalSlides - 1 ? 'none' : 'auto';
+            }
+
+            // 5. Navigation Handlers
+            function goNext() {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    renderSlide(currentSlide);
+                }
+            }
+
+            function goPrev() {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    renderSlide(currentSlide);
+                }
+            }
+
+            btnNext.addEventListener('click', goNext);
+            btnPrev.addEventListener('click', goPrev);
+
+            // 6. Keyboard Navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') {
+                    goNext();
+                } else if (e.key === 'ArrowLeft') {
+                    goPrev();
+                }
+            });
+
+            // 7. Prompt Modal Logic
+            function openPromptModal() {
+                if(!currentCarouselId) return;
+                
+                // Set prompt text based on the active carousel
+                const basePrompt = `Por favor, créame un nuevo carrusel para el sistema.\nEl tema/texto base es:\n\n---\n[ INSERTA AQUÍ TU TEMA, TEXTO, O ARCHIVO MARKDOWN ]\n---\n\nInstrucciones para el agente:\n1. Analiza el texto y divídelo en 4 a 6 slides (Portada, Desarrollo, Checklist/Tips, CTA).\n2. Usa la estructura de etiquetas <section> que requiere el sistema.\n3. Recuerda usar las clases de Tailwind y la tipografía base (font-sans, font-hand para acentos, text-coral, text-charcoal).\n4. Guarda el resultado en un archivo dentro de la carpeta 'carousels/' con el nombre '00X-nombre-tema.html'.\n5. Actualiza el archivo 'carousels.json' añadiendo el nuevo objeto con su título, fecha y ruta al archivo.`;
+                
+                promptText.textContent = basePrompt;
+                
+                // Reset copy button
+                btnCopyPrompt.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg> Copiar Prompt';
+                btnCopyPrompt.classList.remove('text-green-400', 'border-green-400/50');
+                
+                // Show modal with animation
+                promptModal.classList.remove('hidden');
+                // Trigger reflow
+                void promptModal.offsetWidth;
+                promptModal.classList.remove('opacity-0');
+                promptModalContent.classList.remove('scale-95');
+                promptModalContent.classList.add('scale-100');
+            }
+
+            function closePromptModal() {
+                promptModal.classList.add('opacity-0');
+                promptModalContent.classList.remove('scale-100');
+                promptModalContent.classList.add('scale-95');
+                
+                setTimeout(() => {
+                    promptModal.classList.add('hidden');
+                }, 300);
+            }
+
+            btnShowPrompt.addEventListener('click', openPromptModal);
+            btnCloseModal.addEventListener('click', closePromptModal);
+            promptModal.addEventListener('click', (e) => {
+                if(e.target === promptModal) closePromptModal();
+            });
+            
+            btnCopyPrompt.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(promptText.textContent);
+                    btnCopyPrompt.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ¡Copiado!';
+                    btnCopyPrompt.classList.add('text-green-400');
+                } catch (err) {
+                    console.error('Error al copiar:', err);
+                }
+            });
+
+            // 8. Export to PNG (Disabled for now)
+            async function exportCurrentSlideToCanvas() {
+                const mold = document.getElementById('master-mold');
+                const wrapper = document.getElementById('scale-wrapper');
+                
+                // Wait for fonts to be completely loaded just in case
+                await document.fonts.ready;
+                
+                // Disable transition and apply export mode to prevent offset clipping
+                wrapper.style.transition = 'none';
+                wrapper.classList.add('export-mode');
+                mold.classList.add('exporting');
+                
+                // Small delay to ensure any CSS transitions/scale finish and layout recalculates
+                await new Promise(resolve => setTimeout(resolve, 150));
+                
+                const canvas = await html2canvas(mold, {
+                    scale: 1, // Capture at 1:1 of the 1080x1350
+                    width: 1080,
+                    height: 1350,
+                    scrollX: 0,
+                    scrollY: 0,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#F4F0E6'
+                });
+
+                // Restore state
+                wrapper.classList.remove('export-mode');
+                mold.classList.remove('exporting');
+                
+                // Restore transition after a tiny delay
+                setTimeout(() => {
+                    wrapper.style.transition = 'transform 0.1s ease-out';
+                }, 50);
+
+                return canvas;
+            }
+
+            /* Replaced export buttons with dummy ones for now */
+            // The export functions remain in the code but are not attached to active buttons
+
+            // 9. Responsive Scaling
+            function handleResize() {
+                // Calculate scale to fit preview container with padding
+                const containerWidth = previewContainer.clientWidth;
+                // Subtract the top bar height (approx 100px) and some bottom padding
+                const containerHeight = previewContainer.clientHeight - 100;
+                
+                const scaleX = (containerWidth - 80) / 1080;
+                const scaleY = (containerHeight - 40) / 1350;
+                const scale = Math.min(scaleX, scaleY, 1); 
+                
+                wrapper.style.transform = `scale(${scale})`;
+            }
+
+            window.addEventListener('resize', handleResize);
+            
+            // Initial calls
+            handleResize();
+            initApp();
+        });
+    </script>
+</body>
+</html>
